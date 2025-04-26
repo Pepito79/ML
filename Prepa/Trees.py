@@ -8,6 +8,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import classification_report
 
 
 df = pd.read_csv("MBA.csv")
@@ -67,5 +69,39 @@ for name, model in models.items():
 best_model_name = max(model_scores, key=lambda x: model_scores[x]["F1-score"])
 print(f"\nBest Model: {best_model_name} based on F1-score")
 
-####End####
+param_grid = {
+    "n_estimators": [50, 100, 200],  # Number of trees
+    "max_depth": [10, 20, None],  # Tree depth
+    "min_samples_split": [2, 5, 10],  # Minimum samples to split
+    "min_samples_leaf": [1, 2, 4],  # Minimum samples per leaf
+}
 
+# Initialize Grid Search
+grid_search = GridSearchCV(RandomForestClassifier(class_weight="balanced", random_state=42),
+                           param_grid, cv=3, scoring="f1_weighted", n_jobs=-1)
+
+# Train on balanced dataset
+grid_search.fit(X_train_balanced, y_train_balanced)
+
+# Best parameters
+print("Best Hyperparameters:", grid_search.best_params_)
+
+# Train Random Forest with best hyperparameters
+final_rf_model = RandomForestClassifier(
+    max_depth=None,
+    min_samples_leaf=1,
+    min_samples_split=2,
+    n_estimators=200,
+    class_weight="balanced",
+    random_state=42
+)
+
+# Train final model on balanced dataset
+final_rf_model.fit(X_train_balanced, y_train_balanced)
+
+# Make predictions on test data
+y_pred_final = final_rf_model.predict(X_test)
+
+# Evaluate final model
+print("Final Model Performance:\n")
+print(classification_report(y_test, y_pred_final))
